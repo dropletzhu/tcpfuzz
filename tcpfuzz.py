@@ -50,4 +50,8 @@ if __name__ == "__main__":
 	parser.add_option("-p", "--dport", dest="dport", type="int", help="destination port")
 	(options, args) = parser.parse_args()
 
+	if not options.dst or not options.dport:
+		parser.print_help()
+		exit()
+
 	tcp_fast_reset(options)
