@@ -3,8 +3,8 @@
 from optparse import OptionParser
 from scapy.all import *
 
-def tcp_fast_reset(options):
-	init_seq = 100
+def tcp_fast_data(options):
+	init_seq = 0
 
 	ip = IP(src=options.src, dst=options.dst)
 	syn = TCP(sport=options.sport, dport=options.dport, flags="S", seq=init_seq)
@@ -15,30 +15,20 @@ def tcp_fast_reset(options):
 	ack = TCP(sport=options.sport, dport=options.dport, flags="A", seq=init_seq+1, ack=ack_seq)
 	send(ip/ack)
 
-	time.sleep(5)
-
+	#send 64k 1 byte packet
 	seq = init_seq + 1
-	payload = '0' * 128
-	i = 0
-	while i < 8:
-		while seq < (i+1)*65535:
-			ack = TCP(sport=options.sport, dport=options.dport, flags="A", seq=seq, ack=ack_seq)
-			send(ip/ack/payload)
-			seq += 128
-		i += 1
-		time.sleep(1)
+	payload = '0' * 1
+	while seq < 65535:
+		ack = TCP(sport=options.sport, dport=options.dport, flags="A", seq=seq, ack=ack_seq)
+		send(ip/ack/payload)
+		seq += 1
 
-	i = 1
-	while i < 8:
-		j = 0
-		seq = 8*65535 + 128
-		while j < 65535:
-			rst = TCP(sport=options.sport, dport=options.dport, flags="R", seq=seq, ack=ack_seq)
-			send(ip/rst)
-			j += 1
-		i += 1
-		time.sleep(1)
-
+	#send 64k reset
+	seq = init_seq + 1
+	while seq < 65535:
+		rst = TCP(sport=options.sport, dport=options.dport, flags="R", seq=seq, ack=ack_seq)
+		send(ip/rst)
+		seq += 1
 
 if __name__ == "__main__":
 	usage = "usage: ./tcpfuzz.py -s [src] -d [dst] -q [sport] -p [dport]\n"
@@ -54,4 +44,4 @@ if __name__ == "__main__":
 		parser.print_help()
 		exit()
 
-	tcp_fast_reset(options)
+	tcp_fast_data(options)
