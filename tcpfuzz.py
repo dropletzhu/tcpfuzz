@@ -1,47 +1,56 @@
 #!/usr/bin/python
 
-from optparse import OptionParser
-from scapy.all import *
-
-def tcp_fast_data(options):
-	init_seq = 0
-
-	ip = IP(src=options.src, dst=options.dst)
-	syn = TCP(sport=options.sport, dport=options.dport, flags="S", seq=init_seq)
-	syn_ack = sr1(ip/syn)
-	print syn_ack.window
-
-	ack_seq = syn_ack.seq + 1
-	ack = TCP(sport=options.sport, dport=options.dport, flags="A", seq=init_seq+1, ack=ack_seq)
-	send(ip/ack)
-
-	#send 64k 1 byte packet
-	seq = init_seq + 1
-	payload = '0' * 1
-	while seq < 65535:
-		ack = TCP(sport=options.sport, dport=options.dport, flags="A", seq=seq, ack=ack_seq)
-		send(ip/ack/payload)
-		seq += 1
-
-	#send 64k reset
-	seq = init_seq + 1
-	while seq < 65535:
-		rst = TCP(sport=options.sport, dport=options.dport, flags="R", seq=seq, ack=ack_seq)
-		send(ip/rst)
-		seq += 1
+from optparse import OptionParser, OptionGroup
+import random
+from tcp_data import tcp_small_packets
+from tcp_conn import tcp_one_syn
+from tcp_option import tcp_one_option
 
 if __name__ == "__main__":
-	usage = "usage: ./tcpfuzz.py -s [src] -d [dst] -q [sport] -p [dport]\n"
+	usage = "usage: ./tcpfuzz.py\n"
+	usage += " basic option:\n"
+	usage += "  --src [src] --dst [dst] --sport <sport> --dport [dport]\n"
+	usage += " tcp connection fuzzing:\n"
+	usage += "  --one-syn\n"
+	usage += " tcp options fuzzing:\n"
+	usage += " tcp data fuzzing:\n"
+	usage += "  --small-packets\n"
 
 	parser = OptionParser(usage)
-	parser.add_option("-s", "--src", dest="src", help="source address")
-	parser.add_option("-d", "--dst", dest="dst", help="destination address")
-	parser.add_option("-q", "--sport", dest="sport", type="int", help="source port")
-	parser.add_option("-p", "--dport", dest="dport", type="int", help="destination port")
+
+	group = OptionGroup(parser,"basic options")
+	group.add_option("", "--src", dest="src", help="source address")
+	group.add_option("", "--dst", dest="dst", help="destination address")
+	group.add_option("", "--sport", dest="sport", type="int", help="source port (optional)")
+	group.add_option("", "--dport", dest="dport", type="int", help="destination port")
+	parser.add_option_group(group)
+
+	group = OptionGroup(parser,"tcp connection fuzzing")
+	group.add_option("", "--one-syn", action="store_true", dest="one_syn", help="send one syn packet")
+	parser.add_option_group(group)
+
+	group = OptionGroup(parser,"tcp options fuzzing")
+	group.add_option("", "--one-option", action="store_true", dest="one_option", help="fuzzing one tcp option with syn")
+	parser.add_option_group(group)
+
+	group = OptionGroup(parser,"tcp data fuzzing")
+	group.add_option("", "--small-packets", action="store_true", dest="small_packets", help="send fast small packets")
+	parser.add_option_group(group)
+
 	(options, args) = parser.parse_args()
 
-	if not options.dst or not options.dport:
+	if not options.src or not options.dst or not options.dport:
 		parser.print_help()
 		exit()
 
-	tcp_fast_data(options)
+	if not options.sport:
+		options.sport = random.randint(1024,65535)
+
+	if options.one_syn:
+		tcp_one_syn(options)
+
+	if options.one_option:
+		tcp_one_option(options)
+
+	if options.small_packets:
+		tcp_small_packets(options)
