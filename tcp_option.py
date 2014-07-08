@@ -7,8 +7,8 @@ tcp_options = {
 #type,length,value,description
 	'0':['1','',"End of option list"],
 	'1':['1','',"No operation"],
-	'2':['4','1460',"MSS"],
-	'3':['3','9',"Window scale factor"],
+	'2':['4','',"MSS"],
+	'3':['3','',"Window scale factor"],
 	'4':['2','',"SACK permitted"],
 	'5':['n','',"SACK"],
 	'6':['6','',"Echo"],
@@ -35,8 +35,8 @@ tcp_options = {
 	'28':['4','',"User timeout"],
 	'29':['n','',"TCP-AO"],
 	'30':['n','',"MPTCP"],
-	'38':['n','',"WX 38"],
-	'39':['n','',"WX 39"],
+	'38':['4','',"WX 38"],
+	'39':['4','',"WX 39"],
 	'253':['n','',"RFC3692 experiment 1"],
 	'254':['n','',"RFC3692 experiment 2"],
 }
@@ -57,8 +57,9 @@ def __tcp_build_one_option(type):
 	else:
 		length = int(list[0])
 
+	#set value
 	if list[1] == '' and length > 2:
-		value = '8' * (length - 2)
+		value = chr(8) * (length - 2)
 	else:
 		value = list[1]
 
@@ -69,9 +70,10 @@ def __tcp_build_one_option(type):
 	else:
 		option = "%c%c%s" % (type,length,value)
 
+	# add padding
 	pad = length % 4
 	if pad != 0:
-		option = option + '1'*(4-pad)
+		option = option + chr(1)*(4-pad)
 
 	return option
 
